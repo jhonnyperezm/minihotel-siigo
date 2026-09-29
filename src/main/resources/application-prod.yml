@@ -1,0 +1,90 @@
+# Puerto propio: el 8080 del VPS lo usa otro proyecto
+server:
+  port: 8081
+  # Registro de peticiones HTTP: URL, IP de origen, usuario, estado, duración y cliente.
+  # %u es el usuario de Basic Auth (nunca la clave). Rota a diario y guarda 30 días.
+  tomcat:
+    accesslog:
+      enabled: false
+      directory: /opt/minihotel-siigo/logs
+      prefix: access
+      suffix: .log
+      pattern: '%{yyyy-MM-dd HH:mm:ss}t %a %u "%r" %s %b %{ms}Tms "%{User-Agent}i"'
+      max-days: 30
+      # Sin búfer: cada petición se escribe al instante y se ve con tail -f
+      buffered: false
+
+spring:
+  datasource:
+    url: jdbc:h2:file:/opt/minihotel-siigo/data/sync_transactions;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: false
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    database-platform: org.hibernate.dialect.H2Dialect
+
+integrations:
+  retry:
+    max-attempts: 3
+    backoff-ms: 800
+
+  security:
+    username: "balconesdela70@gmail.com"
+    password: "Balcones2026*"
+
+  minihotel:
+    base-url: "https://api2.minihotel.cloud/"
+    timeout-ms: 20000
+
+  siigo:
+    base-url: "https://api.siigo.com"
+    timeout-ms: 30000
+    auth-path: "/auth"
+    token-refresh-margin-seconds: 300
+    # En producción conviene precargar: si una credencial está mal, se ve en el arranque
+    precargar-catalogos: true
+
+    facturacion:
+      producto-nacional: "ALOJAMIENTO"
+      producto-extranjero: "ALOJAMIENTO-EXENTO"
+      impuesto-iva: "IVA 19%"
+      forma-pago-contado: "Efectivo"   # código 1
+      forma-pago-credito: "Movimiento Bancario"      # código 8
+      consumidor-final-identificacion: "222222222222"
+      ciudad-por-defecto: "Medellín"
+      enviar-dian: false
+      enviar-email: false
+      # La DIAN rechaza facturas electrónicas con fecha anterior a hoy: una salida de ayer
+      # facturada después de medianoche se emite con la fecha actual.
+      usar-fecha-actual: true
+
+  hotels:
+    - hotel-key: "hotel-Balcon74"
+      hotel-name: "Balcon74"
+      enabled: true
+      minihotel-auth:
+        username: "autenthico"
+        password: "aut-9%AZ1"
+        hotel-id: "Balcon74"
+        siigo-tenant: "Balcon74"
+      siigo-auth:
+        username: "balconesdela70@gmail.com"
+        access-key: "MjJmMTRlZjUtYmZmNS00MTNjLTkzMDMtNmYyZTY3ZTA3NzI4OiN5JTg5PjN+NE4="
+        partner-id: "minihotel"
+      facturacion:
+        forma-pago-contado: "Efectivo"
+        forma-pago-contado-id: 7027              # zip vacío (código 1)
+        forma-pago-credito: "Movimiento Bancario"
+        forma-pago-credito-id: 23640             # zip con valor (código 6)
+
+logging:
+  level:
+    co.com.siigo.integrations: INFO
+    org.springframework: WARN
+    co.com.siigo.integrations.config.RestClientsConfig: DEBUG

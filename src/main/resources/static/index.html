@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MiniHotel &rarr; Siigo | Panel de Integracion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .fade-in { animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .spinner {
+      display: inline-block; width: 18px; height: 18px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .toast { transition: opacity .3s, transform .3s; }
+    .toast.hide { opacity: 0; transform: translateY(-8px); }
+    tr.clickable:hover td { background: #f1f5f9; cursor: pointer; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+<!-- ===================== LOGIN OVERLAY ===================== -->
+<div id="loginOverlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-8 fade-in">
+    <div class="flex flex-col items-center mb-6">
+      <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center mb-3">
+        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+        </svg>
+      </div>
+      <h1 class="text-xl font-bold text-slate-800">Panel de Integracion</h1>
+      <p class="text-sm text-slate-500 mt-1">MiniHotel &rarr; Siigo</p>
+    </div>
+    <div id="loginError" class="hidden mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700"></div>
+    <form id="loginForm" class="space-y-4" autocomplete="on">
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Usuario</label>
+        <input id="loginUser" type="text" autocomplete="username" required
+          class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          placeholder="admin">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-slate-700 mb-1">Contrasena</label>
+        <input id="loginPass" type="password" autocomplete="current-password" required
+          class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          placeholder="••••••••">
+      </div>
+      <button type="submit" id="loginBtn"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors">
+        Ingresar
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== MAIN APP ===================== -->
+<div id="app" class="hidden">
+
+  <!-- HEADER -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-screen-xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+        </div>
+        <div>
+          <span class="font-semibold text-slate-800">MiniHotel <span class="text-slate-400">&rarr;</span> Siigo</span>
+          <span class="ml-2 text-xs bg-indigo-100 text-indigo-700 font-medium px-2 py-0.5 rounded-full">Integracion</span>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="newSyncBtn"
+          class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          Nueva sincronizacion
+        </button>
+        <button id="logoutBtn"
+          class="text-sm text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+          Salir
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-screen-xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- STATS -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4" id="statsRow">
+      <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+          <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Total</p>
+          <p class="text-2xl font-bold text-slate-800" id="statTotal">—</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
+          <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Exitosas</p>
+          <p class="text-2xl font-bold text-emerald-600" id="statSuccess">—</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+          <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Fallidas</p>
+          <p class="text-2xl font-bold text-red-500" id="statFailed">—</p>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4 flex items-center gap-4">
+        <div class="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
+          <svg class="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+        </div>
+        <div>
+          <p class="text-xs text-slate-500 font-medium uppercase tracking-wide">Pendientes</p>
+          <p class="text-2xl font-bold text-amber-500" id="statPending">—</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FILTERS -->
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <div class="flex flex-wrap gap-3 items-end">
+        <div class="flex flex-col gap-1 min-w-[140px]">
+          <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Desde</label>
+          <input type="date" id="filterFrom"
+            class="px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex flex-col gap-1 min-w-[140px]">
+          <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Hasta</label>
+          <input type="date" id="filterTo"
+            class="px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex flex-col gap-1 min-w-[150px]">
+          <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Estado</label>
+          <select id="filterStatus"
+            class="px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+            <option value="">Todos</option>
+            <option value="SUCCESS">Exitosas</option>
+            <option value="FAILED">Fallidas</option>
+            <option value="PENDING">Pendientes</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1 min-w-[160px]">
+          <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">Hotel</label>
+          <select id="filterHotel"
+            class="px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+            <option value="">Todos</option>
+          </select>
+        </div>
+        <div class="flex flex-col gap-1 flex-1 min-w-[180px]">
+          <label class="text-xs font-medium text-slate-500 uppercase tracking-wide">N.ro Reserva</label>
+          <input type="text" id="filterReservation" placeholder="Ej: 1234-A"
+            class="px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="flex gap-2 pb-0.5">
+          <button id="searchBtn"
+            class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Buscar
+          </button>
+          <button id="clearBtn"
+            class="text-sm text-slate-500 hover:text-slate-800 border border-slate-300 hover:border-slate-400 px-4 py-2 rounded-lg transition-colors">
+            Limpiar
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
+        <h2 class="text-sm font-semibold text-slate-700">Transacciones</h2>
+        <div class="flex items-center gap-3">
+          <span id="resultCount" class="text-xs text-slate-400">Cargando...</span>
+          <button id="exportBtn" onclick="exportToExcel()"
+            class="flex items-center gap-1.5 text-xs font-medium text-emerald-700 border border-emerald-300 hover:bg-emerald-50 px-3 py-1.5 rounded-lg transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Exportar Excel
+          </button>
+          <div class="flex items-center gap-1.5">
+            <label class="text-xs text-slate-500">Por pagina:</label>
+            <select id="pageSizeSelect"
+              class="text-xs border border-slate-300 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-slate-100 bg-slate-50">
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-16">ID</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N.ro Reserva</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Hotel</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Estado</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">N.ro Siigo</th>
+              <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Fecha Sync</th>
+              <th class="text-right px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide w-28">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td colspan="7" class="text-center py-12 text-slate-400">
+                <div class="flex flex-col items-center gap-2">
+                  <div class="spinner" style="border-color:rgba(100,116,139,.2);border-top-color:#6366f1;"></div>
+                  <span class="text-sm">Cargando transacciones...</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="hidden py-16 flex flex-col items-center text-slate-400">
+        <svg class="w-12 h-12 mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+        </svg>
+        <p class="text-sm font-medium">Sin resultados</p>
+        <p class="text-xs mt-1">Prueba ajustando los filtros</p>
+      </div>
+      <!-- PAGINATION FOOTER -->
+      <div id="paginationBar" class="hidden px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-3">
+        <span id="paginationInfo" class="text-xs text-slate-500"></span>
+        <div class="flex items-center gap-1">
+          <button id="pagePrev"
+            class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            &#8592; Anterior
+          </button>
+          <div id="pageNumbers" class="flex items-center gap-1"></div>
+          <button id="pageNext"
+            class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            Siguiente &#8594;
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ============================================================
+     MODAL: DETALLE / REINTENTO
+     ============================================================ -->
+<div id="retryModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 fade-in">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800" id="retryModalTitle">Detalle de transaccion</h3>
+      <button onclick="closeModal('retryModal')" class="text-slate-400 hover:text-slate-700 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <!-- Info grid -->
+      <div class="grid grid-cols-2 gap-3 text-sm">
+        <div class="bg-slate-50 rounded-lg p-3">
+          <p class="text-xs text-slate-500 mb-1">ID Transaccion</p>
+          <p class="font-semibold text-slate-800" id="dtId">—</p>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3">
+          <p class="text-xs text-slate-500 mb-1">Estado</p>
+          <p id="dtStatus">—</p>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3">
+          <p class="text-xs text-slate-500 mb-1">Hotel (Tenant Siigo)</p>
+          <p class="font-medium" id="dtHotel">—</p>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3">
+          <p class="text-xs text-slate-500 mb-1">N.ro Siigo</p>
+          <p class="font-medium" id="dtSiigoNumero">—</p>
+        </div>
+        <div class="bg-slate-50 rounded-lg p-3 col-span-2">
+          <p class="text-xs text-slate-500 mb-1">Fecha creacion</p>
+          <p class="font-medium" id="dtCreatedAt">—</p>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="dtErrorBlock" class="hidden">
+        <p class="text-xs font-medium text-slate-500 mb-1.5 uppercase tracking-wide">Mensaje de error</p>
+        <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-xs text-red-700 break-all max-h-28 overflow-y-auto" id="dtError"></div>
+      </div>
+
+      <!-- Retry form -->
+      <div id="dtRetryForm" class="hidden border-t border-slate-100 pt-4 space-y-3">
+        <p class="text-sm font-semibold text-slate-700">Reintentar sincronizacion</p>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1">N.ro de reserva a sincronizar</label>
+          <input id="retryReservationInput" type="text"
+            class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Numero de reserva">
+          <p class="text-xs text-slate-400 mt-1">Puedes ingresar un numero diferente al original si necesitas sincronizar una factura distinta.</p>
+        </div>
+        <div id="retryResultBlock" class="hidden"></div>
+      </div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end">
+      <button onclick="closeModal('retryModal')"
+        class="text-sm text-slate-500 hover:text-slate-800 border border-slate-300 hover:border-slate-400 px-4 py-2 rounded-lg transition-colors">
+        Cerrar
+      </button>
+      <button id="doRetryBtn"
+        class="hidden flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Reintentar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: NUEVA SINCRONIZACION
+     ============================================================ -->
+<div id="newSyncModal" class="fixed inset-0 z-40 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 fade-in">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100">
+      <h3 class="font-semibold text-slate-800">Nueva sincronizacion manual</h3>
+      <button onclick="closeModal('newSyncModal')" class="text-slate-400 hover:text-slate-700 transition-colors">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="px-6 py-5 space-y-4">
+      <!-- Modo -->
+      <div class="flex rounded-lg border border-slate-200 overflow-hidden text-sm font-medium">
+        <button id="modeReservation"
+          onclick="setSyncMode('reservation')"
+          class="flex-1 py-2 text-center transition-colors bg-indigo-600 text-white">
+          Por reserva
+        </button>
+        <button id="modeRange"
+          onclick="setSyncMode('range')"
+          class="flex-1 py-2 text-center transition-colors bg-white text-slate-500 hover:bg-slate-50">
+          Por rango de fechas
+        </button>
+      </div>
+      <!-- Reserva -->
+      <div id="fieldReservation">
+        <label class="text-xs font-medium text-slate-500 block mb-1 uppercase tracking-wide">N.ro de reserva MiniHotel</label>
+        <input id="newSyncReservation" type="text"
+          class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          placeholder="Ingresa el numero de reserva">
+      </div>
+      <!-- Rango de fechas -->
+      <div id="fieldRange" class="hidden space-y-3">
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1 uppercase tracking-wide">Fecha desde</label>
+          <input id="newSyncFromDate" type="date"
+            class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div>
+          <label class="text-xs font-medium text-slate-500 block mb-1 uppercase tracking-wide">Fecha hasta</label>
+          <input id="newSyncToDate" type="date"
+            class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+      </div>
+      <!-- Hotel -->
+      <div>
+        <label class="text-xs font-medium text-slate-500 block mb-1 uppercase tracking-wide">Hotel</label>
+        <select id="newSyncHotel"
+          class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white">
+          <option value="">Selecciona un hotel...</option>
+        </select>
+      </div>
+      <!-- Progreso (visible solo durante sincronizacion por rango) -->
+      <div id="syncProgressBlock" class="hidden">
+        <div class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-semibold text-indigo-700">Sincronizando...</span>
+            <span id="syncCounter" class="text-xs font-bold text-indigo-800"></span>
+          </div>
+          <div class="w-full bg-indigo-100 rounded-full h-2">
+            <div id="syncProgressBar" class="bg-indigo-600 h-2 rounded-full transition-all duration-300" style="width:0%"></div>
+          </div>
+          <p class="text-xs text-indigo-500 mt-1" id="syncCurrentLabel"></p>
+        </div>
+      </div>
+      <div id="newSyncResultBlock" class="hidden"></div>
+    </div>
+    <div class="px-6 py-4 border-t border-slate-100 flex gap-3 justify-end">
+      <button onclick="closeModal('newSyncModal')"
+        class="text-sm text-slate-500 hover:text-slate-800 border border-slate-300 hover:border-slate-400 px-4 py-2 rounded-lg transition-colors">
+        Cancelar
+      </button>
+      <button id="doNewSyncBtn"
+        class="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+        Sincronizar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+// ─────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────
+let AUTH = sessionStorage.getItem('mh_auth');
+let allTransactions = [];
+let filteredTransactions = [];
+let hotels = [];
+let currentRetryId = null;
+let currentPage = 1;
+let pageSize = 25;
+
+// ─────────────────────────────────────────────
+// API
+// ─────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: {
+      'Authorization': `Basic ${AUTH}`,
+      'Content-Type': 'application/json',
+      ...(opts.headers || {})
+    }
+  });
+  if (res.status === 401) { logout(); return null; }
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try { const b = await res.json(); msg = b.message || b.error || msg; } catch {}
+    throw new Error(msg);
+  }
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+// ─────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────
+document.getElementById('loginForm').addEventListener('submit', async e => {
+  e.preventDefault();
+  const u = document.getElementById('loginUser').value.trim();
+  const p = document.getElementById('loginPass').value;
+  const encoded = btoa(`${u}:${p}`);
+  const btn = document.getElementById('loginBtn');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/sync-transactions', {
+      headers: { 'Authorization': `Basic ${encoded}` }
+    });
+    if (res.status === 401) {
+      showLoginError('Usuario o contrasena incorrectos');
+    } else {
+      AUTH = encoded;
+      sessionStorage.setItem('mh_auth', AUTH);
+      document.getElementById('loginOverlay').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      initApp();
+    }
+  } catch {
+    showLoginError('Error de conexion. Verifica que el servidor este activo.');
+  } finally {
+    btn.textContent = 'Ingresar';
+    btn.disabled = false;
+  }
+});
+
+function showLoginError(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+
+function logout() {
+  AUTH = null;
+  sessionStorage.removeItem('mh_auth');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('loginError').classList.add('hidden');
+  document.getElementById('loginPass').value = '';
+}
+
+document.getElementById('logoutBtn').addEventListener('click', logout);
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+async function initApp() {
+  setDefaultDates();
+  await Promise.all([loadHotels(), loadTransactions()]);
+}
+
+function setDefaultDates() {
+  const today = new Date();
+  const from = new Date(today);
+  from.setDate(from.getDate() - 30);
+  document.getElementById('filterFrom').value = fmt(from);
+  document.getElementById('filterTo').value = fmt(today);
+}
+
+function fmt(d) {
+  return d.toISOString().split('T')[0];
+}
+
+// ─────────────────────────────────────────────
+// HOTELS
+// ─────────────────────────────────────────────
+async function loadHotels() {
+  try {
+    hotels = await apiFetch('/api/sync/hotels') || [];
+    const hotelSel = document.getElementById('filterHotel');
+    const newSyncSel = document.getElementById('newSyncHotel');
+    hotels.forEach(h => {
+      const suc = h.minihotelAuth?.siigoTenant || h.hotelKey;
+      const label = `${h.hotelName} (${suc})`;
+      hotelSel.appendChild(new Option(label, suc));
+      newSyncSel.appendChild(new Option(label, h.hotelKey));
+    });
+  } catch { /* non-critical */ }
+}
+
+function hotelName(siigoTenant) {
+  const h = hotels.find(x => (x.minihotelAuth?.siigoTenant || x.hotelKey) === siigoTenant);
+  return h ? h.hotelName : (siigoTenant || '—');
+}
+
+// ─────────────────────────────────────────────
+// TRANSACTIONS
+// ─────────────────────────────────────────────
+async function loadTransactions() {
+  const from = document.getElementById('filterFrom').value;
+  const to = document.getElementById('filterTo').value;
+  const status = document.getElementById('filterStatus').value;
+
+  setTableLoading(true);
+  try {
+    let url = '/api/sync-transactions/search';
+    const params = new URLSearchParams();
+    if (from) params.set('startDate', `${from}T00:00:00`);
+    if (to) params.set('endDate', `${to}T23:59:59`);
+    if (status) params.set('status', status);
+    if (params.toString()) url += '?' + params.toString();
+    else url = '/api/sync-transactions';
+
+    allTransactions = await apiFetch(url) || [];
+    currentPage = 1;
+    applyClientFilters();
+  } catch (err) {
+    showToast('Error al cargar transacciones: ' + err.message, 'error');
+    renderTable([]);
+  } finally {
+    setTableLoading(false);
+  }
+}
+
+function applyClientFilters() {
+  const hotel = document.getElementById('filterHotel').value;
+  const res = document.getElementById('filterReservation').value.trim().toLowerCase();
+
+  filteredTransactions = allTransactions.filter(t => {
+    if (hotel && t.siigoTenant !== hotel) return false;
+    if (res && !t.reservationNumber?.toLowerCase().includes(res)) return false;
+    return true;
+  });
+
+  currentPage = 1;
+  updateStats();
+  renderTable(filteredTransactions);
+}
+
+function updateStats() {
+  document.getElementById('statTotal').textContent = filteredTransactions.length;
+  document.getElementById('statSuccess').textContent = filteredTransactions.filter(t => t.status === 'SUCCESS').length;
+  document.getElementById('statFailed').textContent = filteredTransactions.filter(t => t.status === 'FAILED').length;
+  document.getElementById('statPending').textContent = filteredTransactions.filter(t => t.status === 'PENDING').length;
+}
+
+// ─────────────────────────────────────────────
+// TABLE RENDERING
+// ─────────────────────────────────────────────
+function renderTable(rows) {
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+  const count = document.getElementById('resultCount');
+  count.textContent = `${rows.length} resultado${rows.length !== 1 ? 's' : ''}`;
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.classList.remove('hidden');
+    empty.classList.add('flex');
+    document.getElementById('paginationBar').classList.add('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+  empty.classList.remove('flex');
+
+  const totalPages = Math.ceil(rows.length / pageSize);
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage - 1) * pageSize;
+  const pageRows = rows.slice(start, start + pageSize);
+
+  renderPagination(rows.length, totalPages);
+
+  tbody.innerHTML = pageRows.map(t => `
+    <tr class="clickable border-b border-slate-50 last:border-0" onclick="openDetail(${t.id})">
+      <td class="px-4 py-3 text-slate-400 text-xs font-mono">#${t.id}</td>
+      <td class="px-4 py-3 font-medium text-slate-800">${esc(t.reservationNumber)}</td>
+      <td class="px-4 py-3 text-slate-600 text-xs">${esc(hotelName(t.siigoTenant))}</td>
+      <td class="px-4 py-3">${statusBadge(t.status)}</td>
+      <td class="px-4 py-3 font-mono text-sm ${t.siigoNumero ? 'text-slate-800' : 'text-slate-300'}">${t.siigoNumero || '—'}</td>
+      <td class="px-4 py-3 text-slate-500 text-xs">${fmtDate(t.createdAt)}</td>
+      <td class="px-4 py-3 text-right">
+        ${t.status === 'FAILED' || t.status === 'PENDING' ? `
+        <button onclick="event.stopPropagation(); openRetry(${t.id})"
+          title="Reintentar sincronizacion"
+          class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 border border-indigo-200 hover:border-indigo-400 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded-lg transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Reintentar
+        </button>` : `
+        <button onclick="event.stopPropagation(); openDetail(${t.id})"
+          title="Ver detalle"
+          class="inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 border border-slate-200 hover:border-slate-400 bg-slate-50 hover:bg-slate-100 px-2.5 py-1.5 rounded-lg transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+          </svg>
+          Ver
+        </button>`}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderPagination(total, totalPages) {
+  const bar = document.getElementById('paginationBar');
+  const info = document.getElementById('paginationInfo');
+  const pageNums = document.getElementById('pageNumbers');
+  const prevBtn = document.getElementById('pagePrev');
+  const nextBtn = document.getElementById('pageNext');
+
+  if (totalPages <= 1) {
+    bar.classList.add('hidden');
+    return;
+  }
+  bar.classList.remove('hidden');
+
+  const start = (currentPage - 1) * pageSize + 1;
+  const end = Math.min(currentPage * pageSize, total);
+  info.textContent = `Mostrando ${start}–${end} de ${total}`;
+
+  prevBtn.disabled = currentPage === 1;
+  nextBtn.disabled = currentPage === totalPages;
+
+  // Page number buttons: show up to 7 pages with ellipsis
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (currentPage > 3) pages.push('…');
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) pages.push(i);
+    if (currentPage < totalPages - 2) pages.push('…');
+    pages.push(totalPages);
+  }
+
+  pageNums.innerHTML = pages.map(p =>
+    p === '…'
+      ? `<span class="px-1.5 text-xs text-slate-400">…</span>`
+      : `<button onclick="goToPage(${p})"
+           class="w-7 h-7 text-xs rounded-lg border transition-colors ${p === currentPage
+             ? 'bg-indigo-600 text-white border-indigo-600 font-semibold'
+             : 'border-slate-200 text-slate-600 hover:bg-slate-50'}">${p}</button>`
+  ).join('');
+}
+
+function goToPage(page) {
+  currentPage = page;
+  renderTable(filteredTransactions);
+}
+
+function setTableLoading(on) {
+  if (on) {
+    document.getElementById('tableBody').innerHTML = `
+      <tr><td colspan="7" class="text-center py-12 text-slate-400">
+        <div class="flex flex-col items-center gap-2">
+          <div class="w-5 h-5 border-2 border-slate-200 border-t-indigo-500 rounded-full animate-spin"></div>
+          <span class="text-sm">Cargando...</span>
+        </div>
+      </td></tr>`;
+    document.getElementById('emptyState').classList.add('hidden');
+    document.getElementById('emptyState').classList.remove('flex');
+  }
+}
+
+function statusBadge(status) {
+  const map = {
+    SUCCESS: 'bg-emerald-100 text-emerald-700',
+    FAILED:  'bg-red-100 text-red-600',
+    PENDING: 'bg-amber-100 text-amber-700'
+  };
+  const labels = { SUCCESS: 'Exitosa', FAILED: 'Fallida', PENDING: 'Pendiente' };
+  const cls = map[status] || 'bg-slate-100 text-slate-600';
+  return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${cls}">${labels[status] || status}</span>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+function esc(s) {
+  if (!s) return '—';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ─────────────────────────────────────────────
+// MODALS
+// ─────────────────────────────────────────────
+function openModal(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('hidden');
+  el.classList.add('flex');
+}
+
+function closeModal(id) {
+  if (isSyncing && id === 'newSyncModal') {
+    showToast('No puedes cerrar este panel mientras se esta sincronizando', 'warning');
+    return;
+  }
+  const el = document.getElementById(id);
+  el.classList.add('hidden');
+  el.classList.remove('flex');
+}
+
+// Close on backdrop click
+['retryModal', 'newSyncModal'].forEach(id => {
+  document.getElementById(id).addEventListener('click', function(e) {
+    if (e.target === this) closeModal(id);
+  });
+});
+
+// ─────────────────────────────────────────────
+// DETAIL MODAL
+// ─────────────────────────────────────────────
+function openDetail(id) {
+  const t = allTransactions.find(x => x.id === id);
+  if (!t) return;
+  currentRetryId = id;
+
+  document.getElementById('retryModalTitle').textContent = 'Detalle de transaccion #' + id;
+  document.getElementById('dtId').textContent = '#' + t.id;
+  document.getElementById('dtStatus').innerHTML = statusBadge(t.status);
+  document.getElementById('dtHotel').textContent = hotelName(t.siigoTenant) + ' (' + (t.siigoTenant || '—') + ')';
+  document.getElementById('dtSiigoNumero').textContent = t.siigoNumero || '—';
+  document.getElementById('dtCreatedAt').textContent = fmtDate(t.createdAt);
+
+  const errBlock = document.getElementById('dtErrorBlock');
+  if (t.errorMessage) {
+    errBlock.classList.remove('hidden');
+    document.getElementById('dtError').textContent = t.errorMessage;
+  } else {
+    errBlock.classList.add('hidden');
+  }
+
+  document.getElementById('dtRetryForm').classList.add('hidden');
+  document.getElementById('doRetryBtn').classList.add('hidden');
+  document.getElementById('retryResultBlock').classList.add('hidden');
+
+  openModal('retryModal');
+}
+
+function openRetry(id) {
+  const t = allTransactions.find(x => x.id === id);
+  if (!t) return;
+  currentRetryId = id;
+
+  document.getElementById('retryModalTitle').textContent = 'Reintentar reserva #' + t.reservationNumber;
+  document.getElementById('dtId').textContent = '#' + t.id;
+  document.getElementById('dtStatus').innerHTML = statusBadge(t.status);
+  document.getElementById('dtHotel').textContent = hotelName(t.siigoTenant) + ' (' + (t.siigoTenant || '—') + ')';
+  document.getElementById('dtSiigoNumero').textContent = t.siigoNumero || '—';
+  document.getElementById('dtCreatedAt').textContent = fmtDate(t.createdAt);
+
+  const errBlock = document.getElementById('dtErrorBlock');
+  if (t.errorMessage) {
+    errBlock.classList.remove('hidden');
+    document.getElementById('dtError').textContent = t.errorMessage;
+  } else {
+    errBlock.classList.add('hidden');
+  }
+
+  document.getElementById('retryReservationInput').value = t.reservationNumber;
+  document.getElementById('dtRetryForm').classList.remove('hidden');
+  document.getElementById('doRetryBtn').classList.remove('hidden');
+  document.getElementById('doRetryBtn').disabled = false;
+  document.getElementById('doRetryBtn').innerHTML = `
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+    </svg>
+    Reintentar`;
+  document.getElementById('retryResultBlock').classList.add('hidden');
+
+  openModal('retryModal');
+}
+
+// RETRY ACTION
+document.getElementById('doRetryBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('doRetryBtn');
+  const customNum = document.getElementById('retryReservationInput').value.trim();
+  if (!customNum) { showToast('Ingresa el numero de reserva', 'error'); return; }
+
+  btn.innerHTML = '<span class="spinner"></span> Procesando...';
+  btn.disabled = true;
+
+  const resultBlock = document.getElementById('retryResultBlock');
+  resultBlock.classList.add('hidden');
+
+  try {
+    const body = customNum ? JSON.stringify({ customReservationNumber: customNum }) : null;
+    const responses = await apiFetch(`/api/sync-transactions/${currentRetryId}/retry`, {
+      method: 'POST',
+      body
+    });
+
+    const count = responses ? responses.length : 0;
+    if (count > 0) {
+      const r = responses[0];
+      resultBlock.innerHTML = `
+        <div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm">
+          <p class="font-semibold text-emerald-700 mb-1">Sincronizacion exitosa</p>
+          <p class="text-emerald-600 text-xs">Documento Siigo: <strong>${esc(r.numero)}</strong> &mdash; Fecha: ${esc(r.fecha)}</p>
+        </div>`;
+      resultBlock.classList.remove('hidden');
+      showToast(`Reintento exitoso. Documento Siigo: ${r.numero}`, 'success');
+      btn.innerHTML = 'Listo';
+      await loadTransactions();
+    } else {
+      resultBlock.innerHTML = `
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+          El proceso no genero documentos. Puede que la reserva ya este sincronizada o no tenga transacciones pendientes.
+        </div>`;
+      resultBlock.classList.remove('hidden');
+      btn.innerHTML = 'Reintentar';
+      btn.disabled = false;
+    }
+  } catch (err) {
+    resultBlock.innerHTML = `
+      <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+        <p class="font-semibold text-red-700 mb-1">Error en el reintento</p>
+        <p class="text-red-600 text-xs break-all">${esc(err.message)}</p>
+      </div>`;
+    resultBlock.classList.remove('hidden');
+    btn.innerHTML = `
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+      </svg>
+      Reintentar`;
+    btn.disabled = false;
+    showToast('Error: ' + err.message, 'error');
+  }
+});
+
+// ─────────────────────────────────────────────
+// NEW SYNC MODAL
+// ─────────────────────────────────────────────
+let syncMode = 'reservation';
+let isSyncing = false;
+
+function setSyncMode(mode) {
+  syncMode = mode;
+  const isRange = mode === 'range';
+  document.getElementById('fieldReservation').classList.toggle('hidden', isRange);
+  document.getElementById('fieldRange').classList.toggle('hidden', !isRange);
+  document.getElementById('modeReservation').className =
+    `flex-1 py-2 text-center transition-colors ${!isRange ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`;
+  document.getElementById('modeRange').className =
+    `flex-1 py-2 text-center transition-colors ${isRange ? 'bg-indigo-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`;
+}
+
+const syncIconHtml = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+  </svg> Sincronizar`;
+
+function resetNewSyncModal() {
+  document.getElementById('newSyncReservation').value = '';
+  document.getElementById('newSyncFromDate').value = '';
+  document.getElementById('newSyncToDate').value = '';
+  document.getElementById('newSyncResultBlock').classList.add('hidden');
+  document.getElementById('syncProgressBlock').classList.add('hidden');
+  setSyncMode('reservation');
+  const btn = document.getElementById('doNewSyncBtn');
+  btn.disabled = false;
+  btn.innerHTML = syncIconHtml;
+}
+
+document.getElementById('newSyncBtn').addEventListener('click', () => {
+  resetNewSyncModal();
+  openModal('newSyncModal');
+});
+
+function updateProgress(done, total) {
+  const remaining = total - done;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  document.getElementById('syncCounter').textContent = `${done} / ${total}`;
+  document.getElementById('syncProgressBar').style.width = pct + '%';
+  document.getElementById('syncCurrentLabel').textContent =
+    remaining > 0 ? `Quedan ${remaining} reservacion(es) por procesar` : 'Finalizando...';
+}
+
+document.getElementById('doNewSyncBtn').addEventListener('click', async () => {
+  const hotelKey = document.getElementById('newSyncHotel').value;
+  const resultBlock = document.getElementById('newSyncResultBlock');
+  const progressBlock = document.getElementById('syncProgressBlock');
+
+  if (!hotelKey) { showToast('Selecciona un hotel', 'error'); return; }
+
+  const btn = document.getElementById('doNewSyncBtn');
+  resultBlock.classList.add('hidden');
+  progressBlock.classList.add('hidden');
+
+  // ── Modo reserva individual ──────────────────────────────────
+  if (syncMode === 'reservation') {
+    const reservation = document.getElementById('newSyncReservation').value.trim();
+    if (!reservation) { showToast('Ingresa el numero de reserva', 'error'); return; }
+
+    btn.innerHTML = '<span class="spinner"></span> Procesando...';
+    btn.disabled = true;
+    isSyncing = true;
+
+    try {
+      const responses = await apiFetch(
+        `/api/sync/hotel/${encodeURIComponent(hotelKey)}/reservation/${encodeURIComponent(reservation)}`
+      );
+      showSyncResults(responses, resultBlock);
+      await loadTransactions();
+    } catch (err) {
+      showSyncError(err, resultBlock);
+    } finally {
+      btn.innerHTML = syncIconHtml;
+      btn.disabled = false;
+      isSyncing = false;
+    }
+    return;
+  }
+
+  // ── Modo rango de fechas ─────────────────────────────────────
+  const from = document.getElementById('newSyncFromDate').value;
+  const to   = document.getElementById('newSyncToDate').value;
+  if (!from || !to) { showToast('Ingresa el rango de fechas', 'error'); return; }
+  if (from > to)    { showToast('La fecha desde debe ser menor o igual a la fecha hasta', 'error'); return; }
+
+  btn.innerHTML = '<span class="spinner"></span> Consultando reservaciones...';
+  btn.disabled = true;
+  isSyncing = true;
+
+  let ids = [];
+  try {
+    ids = await apiFetch(
+      `/api/sync/hotel/${encodeURIComponent(hotelKey)}/reservation-ids?fromDate=${from}&toDate=${to}`
+    ) || [];
+  } catch (err) {
+    showSyncError(err, resultBlock);
+    btn.innerHTML = syncIconHtml;
+    btn.disabled = false;
+    isSyncing = false;
+    return;
+  }
+
+  if (ids.length === 0) {
+    resultBlock.innerHTML = `
+      <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+        No se encontraron reservaciones con salida en el rango indicado.
+      </div>`;
+    resultBlock.classList.remove('hidden');
+    btn.innerHTML = syncIconHtml;
+    btn.disabled = false;
+    isSyncing = false;
+    return;
+  }
+
+  // Mostrar barra de progreso
+  progressBlock.classList.remove('hidden');
+  updateProgress(0, ids.length);
+  btn.innerHTML = '<span class="spinner"></span> Sincronizando...';
+
+  const allResponses = [];
+  const errors = [];
+
+  for (let i = 0; i < ids.length; i++) {
+    const id = ids[i];
+    document.getElementById('syncCurrentLabel').textContent =
+      `Procesando reservacion ${id} (${i + 1} de ${ids.length})`;
+    try {
+      const responses = await apiFetch(
+        `/api/sync/hotel/${encodeURIComponent(hotelKey)}/reservation/${encodeURIComponent(id)}`
+      ) || [];
+      allResponses.push(...responses);
+    } catch (err) {
+      errors.push({ id, msg: err.message });
+    }
+    updateProgress(i + 1, ids.length);
+  }
+
+  progressBlock.classList.add('hidden');
+  showSyncResults(allResponses, resultBlock, errors);
+  showToast(
+    allResponses.length > 0 ? `${allResponses.length} documento(s) sincronizados` : 'Sin documentos nuevos',
+    allResponses.length > 0 ? 'success' : 'warning'
+  );
+  btn.innerHTML = syncIconHtml;
+  btn.disabled = false;
+  isSyncing = false;
+  await loadTransactions();
+});
+
+function showSyncResults(responses, resultBlock, errors = []) {
+  const count = responses ? responses.length : 0;
+  let html = '';
+  if (count > 0) {
+    html += `<div class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm mb-2">
+      <p class="font-semibold text-emerald-700 mb-1">${count} documento(s) sincronizados</p>
+      ${responses.map(r => `<p class="text-emerald-600 text-xs">Doc Siigo: <strong>${esc(r.numero)}</strong> &mdash; ${esc(r.fecha)}</p>`).join('')}
+    </div>`;
+  } else if (errors.length === 0) {
+    html += `<div class="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-700">
+      No se generaron documentos. Verifica que las reservas tengan salida en la fecha indicada.
+    </div>`;
+  }
+  if (errors.length > 0) {
+    html += `<div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm mt-2">
+      <p class="font-semibold text-red-700 mb-1">${errors.length} reservacion(es) con error</p>
+      ${errors.map(e => `<p class="text-red-600 text-xs">${esc(e.id)}: ${esc(e.msg)}</p>`).join('')}
+    </div>`;
+  }
+  resultBlock.innerHTML = html;
+  resultBlock.classList.remove('hidden');
+}
+
+function showSyncError(err, resultBlock) {
+  resultBlock.innerHTML = `
+    <div class="bg-red-50 border border-red-200 rounded-lg p-3 text-sm">
+      <p class="font-semibold text-red-700 mb-1">Error en sincronizacion</p>
+      <p class="text-red-600 text-xs break-all">${esc(err.message)}</p>
+    </div>`;
+  resultBlock.classList.remove('hidden');
+  showToast('Error: ' + err.message, 'error');
+}
+
+// ─────────────────────────────────────────────
+// FILTER EVENTS
+// ─────────────────────────────────────────────
+document.getElementById('pageSizeSelect').addEventListener('change', e => {
+  pageSize = parseInt(e.target.value);
+  currentPage = 1;
+  renderTable(filteredTransactions);
+});
+
+document.getElementById('pagePrev').addEventListener('click', () => {
+  if (currentPage > 1) { currentPage--; renderTable(filteredTransactions); }
+});
+
+document.getElementById('pageNext').addEventListener('click', () => {
+  const totalPages = Math.ceil(filteredTransactions.length / pageSize);
+  if (currentPage < totalPages) { currentPage++; renderTable(filteredTransactions); }
+});
+
+document.getElementById('searchBtn').addEventListener('click', loadTransactions);
+
+document.getElementById('filterReservation').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadTransactions();
+});
+
+document.getElementById('filterStatus').addEventListener('change', () => {
+  // Re-fetch from API to apply server-side status filter
+  loadTransactions();
+});
+
+document.getElementById('filterHotel').addEventListener('change', applyClientFilters);
+
+document.getElementById('clearBtn').addEventListener('click', () => {
+  setDefaultDates();
+  document.getElementById('filterStatus').value = '';
+  document.getElementById('filterHotel').value = '';
+  document.getElementById('filterReservation').value = '';
+  loadTransactions();
+});
+
+// ─────────────────────────────────────────────
+// TOAST
+// ─────────────────────────────────────────────
+function showToast(msg, type = 'success') {
+  const colors = {
+    success: 'bg-emerald-600',
+    error:   'bg-red-600',
+    warning: 'bg-amber-500',
+    info:    'bg-indigo-600'
+  };
+  const icons = {
+    success: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>',
+    error:   '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>',
+    warning: '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>',
+    info:    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>'
+  };
+  const div = document.createElement('div');
+  div.className = `toast pointer-events-auto flex items-start gap-3 ${colors[type] || colors.info} text-white text-sm font-medium px-4 py-3 rounded-xl shadow-lg max-w-sm`;
+  div.innerHTML = `
+    <svg class="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">${icons[type] || icons.info}</svg>
+    <span class="flex-1 leading-snug">${esc(msg)}</span>`;
+  document.getElementById('toastContainer').appendChild(div);
+  setTimeout(() => {
+    div.classList.add('hide');
+    setTimeout(() => div.remove(), 300);
+  }, 4000);
+}
+
+// ─────────────────────────────────────────────
+// EXPORT TO EXCEL (CSV con BOM para Excel)
+// ─────────────────────────────────────────────
+function exportToExcel() {
+  if (!filteredTransactions || filteredTransactions.length === 0) {
+    showToast('No hay datos para exportar', 'warning');
+    return;
+  }
+
+  const hotelMap = {};
+  hotels.forEach(h => { hotelMap[h.minihotelAuth?.hotelId] = h.hotelName || h.hotelKey; });
+
+  const headers = [
+    'ID', 'N.ro Reserva', 'Hotel ID', 'Hotel Nombre', 'Tenant Siigo',
+    'Estado', 'Doc Siigo ID', 'Doc Siigo Numero', 'Fecha Doc Siigo',
+    'Fecha Sincronizacion', 'Error'
+  ];
+
+  const rows = filteredTransactions.map(t => [
+    t.id,
+    t.reservationNumber,
+    t.minihotelHotelId,
+    hotelMap[t.minihotelHotelId] || '',
+    t.siigoTenant || '',
+    t.status,
+    t.siigoId || '',
+    t.siigoNumero || '',
+    t.siigoFecha ? t.siigoFecha.replace('T', ' ') : '',
+    t.createdAt ? t.createdAt.replace('T', ' ') : '',
+    t.errorMessage ? t.errorMessage.replace(/[\r\n]+/g, ' ') : ''
+  ]);
+
+  const csvContent = [headers, ...rows]
+    .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(';'))
+    .join('\r\n');
+
+  // BOM para que Excel abra correctamente caracteres especiales
+  const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const fecha = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = `sincronizaciones_${fecha}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast(`${filteredTransactions.length} registro(s) exportados`, 'success');
+}
+
+// ─────────────────────────────────────────────
+// STARTUP
+// ─────────────────────────────────────────────
+if (AUTH) {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  initApp();
+}
+</script>
+</body>
+</html>

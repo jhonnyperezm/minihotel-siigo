@@ -1,0 +1,92 @@
+server:
+  port: 8084
+
+spring:
+  datasource:
+    url: jdbc:h2:file:./data/sync_transactions;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.H2Dialect
+
+integrations:
+  retry:
+    max-attempts: 3
+    backoff-ms: 800
+
+  # Autenticación HTTP Basic de los endpoints REST de esta aplicación
+  security:
+    username: "${API_USERNAME:admin}"
+    password: "${API_PASSWORD:123456}"
+
+  minihotel:
+    base-url: "${MINIHOTEL_BASE_URL:https://sandbox.minihotel.cloud/}"
+    timeout-ms: 20000
+
+  # ===================================================================
+  # SIIGO API
+  # Credenciales: Siigo Nube -> Alianzas -> "Mi Credencial API"
+  # El Partner-Id es obligatorio y debe corresponder a una app registrada.
+  # ===================================================================
+  siigo:
+    base-url: "${SIIGO_BASE_URL:https://api.siigo.com}"
+    timeout-ms: 30000
+    auth-path: "/auth"
+    token-refresh-margin-seconds: 300
+    precargar-catalogos: false
+
+    # Parámetros de facturación por defecto.
+    # Descubre los valores reales con GET /api/catalogo/{hotelKey}/resumen
+    facturacion:
+      producto-nacional: "ALOJAMIENTO"
+      producto-extranjero: "ALOJAMIENTO-EXENTO"
+      impuesto-iva: "IVA 19%"
+      # Recomendado: fijar el id (GET /api/catalogo/{hotel}/formas-pago); si se define, el nombre se ignora
+      forma-pago-contado: "Efectivo"   # código 1
+      # forma-pago-contado-id: 0000
+      forma-pago-credito: "Movimiento Bancario"      # código 8
+      # forma-pago-credito-id: 0000
+      consumidor-final-identificacion: "222222222222"
+      ciudad-por-defecto: "Medellín"
+      enviar-dian: false                  # en dev se deja en false para no timbrar pruebas
+      enviar-email: false
+      usar-fecha-actual: false
+
+  # ===================================================================
+  # MULTI-TENANT
+  # En Siigo cada empresa tiene sus propias credenciales. Si varios hoteles
+  # facturan bajo la misma empresa, repite las credenciales y sepáralos con
+  # centro-costo-id o con un comprobante distinto.
+  # ===================================================================
+  hotels:
+    - hotel-key: "hotel-Sajonia"
+      hotel-name: "Autenthico Sajonia Hotel Aeropuerto"
+      enabled: true
+      minihotel-auth:
+        username: "Test"
+        password: "3657488"
+        hotel-id: "sandbox"
+        siigo-tenant: "sajonia"
+      siigo-auth:
+        username: "${SIIGO_SAJONIA_USER:balconesdela70@gmail.com}"
+        access-key: "${SIIGO_SAJONIA_KEY:MjJmMTRlZjUtYmZmNS00MTNjLTkzMDMtNmYyZTY3ZTA3NzI4OiN5JTg5PjN+NE4=}"
+        partner-id: "${SIIGO_PARTNER_ID:minihotel}"
+      facturacion:
+        usar-fecha-actual: true
+        forma-pago-contado: "Efectivo"
+        forma-pago-contado-id: 7027              # zip vacío (código 1)
+        forma-pago-credito: "Movimiento Bancario"
+        forma-pago-credito-id: 23640             # zip con valor (código 6)
+
+logging:
+  level:
+    co.com.siigo.integrations: INFO
+    co.com.siigo.integrations.config.RestClientsConfig: DEBUG

@@ -1,0 +1,35 @@
+{
+  "skill_name": "java17-best-practices",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Crea un servicio Spring Boot llamado TerceroService que busque un tercero por NIT y lo cree si no existe. Usa las mejores prácticas del proyecto.",
+      "expected_output": "Clase @Service con inyección por constructor (@RequiredArgsConstructor), métodos con @Transactional(readOnly=true) para lectura y @Transactional para escritura, retorno de Optional<T>, manejo de excepciones de dominio, y @Slf4j para logging sin datos sensibles.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Tengo esta entidad JPA: @Data public class Documento { @Id Long id; String numero; ... } ¿Está bien así? ¿Qué mejorarías?",
+      "expected_output": "Identificar el problema de @Data en entidades JPA (equals/hashCode con proxies Hibernate), recomendar cambiar a @Getter/@Setter, explicar el patrón correcto con @Entity.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Escribe un mapper MapStruct que convierta un objeto Reservacion (con campos: nroReservacion, fechaEntrada, nombreHuesped) a ReservacionPojo (con campos: numero, fecha, huesped).",
+      "expected_output": "Interface con @Mapper(componentModel = \"spring\"), @Mapping explícito para cada campo con nombre diferente, sin lógica de negocio dentro del mapper.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Crea un record Java para representar la respuesta de creación de un documento en World Office, con campos: documentoId, numero, fecha, total.",
+      "expected_output": "Record Java 17 con los campos como parámetros del constructor canónico, sin código boilerplate adicional.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Cómo debo manejar el contexto del hotel en un servicio que usa ThreadLocal? Muéstrame el patrón correcto.",
+      "expected_output": "Patrón try-finally garantizando clearCurrentHotel() en el bloque finally, ejemplo con código concreto, explicación de por qué es importante limpiar el ThreadLocal.",
+      "files": []
+    }
+  ]
+}

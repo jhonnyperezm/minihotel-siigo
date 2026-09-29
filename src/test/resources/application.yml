@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+
+integrations:
+  minihotel:
+    base-url: http://localhost:9999
+  siigo:
+    base-url: http://localhost:9998
+    precargar-catalogos: false
+    auth:
+      username: test-user
+      access-key: test-key
+      partner-id: TestPartner
+    facturacion:
+      producto-nacional: "ALOJAMIENTO"
+      producto-extranjero: "ALOJAMIENTO-EXENTO"
+      impuesto-iva: "IVA 19%"
+      forma-pago-contado: "Efectivo"
+      forma-pago-credito: "Pagos"
+      consumidor-final-identificacion: "222222222222"
+      ciudad-por-defecto: "Medellín"
+  webhooks:
+    enabled: true
+    username: minihotel-test
+    password: minihotel-test
+    disparador: OCUPACION
+    facturacion-automatica: true
+    retener-dias: 30
+    max-payload-chars: 20000
+  security:
+    username: test
+    password: test

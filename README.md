@@ -48,7 +48,7 @@ Estas son las diferencias que obligaron a rediseñar partes del proyecto, no sol
 ## Arquitectura
 
 ```
-ScheduledSyncService  (cron 00:10 diario)
+ScheduledSyncService  (cada 30 min + 00:10 diario)
         │
         ▼
 IntegrationService
@@ -77,8 +77,10 @@ SiigoCatalogoService  → catálogos por tenant (comprobantes, pagos, impuestos,
 
 ## Flujo de sincronizacion
 
-1. `ScheduledSyncService` corre todos los días a las **00:10** para cada hotel activo.
-2. Consulta a MiniHotel las reservaciones con fecha de salida del día anterior.
+1. `ScheduledSyncService` corre **cada media hora** (:00 y :30) para cada hotel activo, y
+   además a las **00:10**, que reintenta las transacciones en `FAILED`.
+2. Consulta a MiniHotel las reservaciones con check-out (`Status=OUT`) y salida de ayer o de
+   hoy. Las que ya tienen transacción se omiten, así que repetir el rango no duplica facturas.
 3. Para cada reservación:
    - Descarta las excluidas (Airbnb, Expedia, marcadas como "Efectivo" en el `zip`).
    - Registra una transacción en estado `PENDING`.
@@ -117,8 +119,8 @@ El disparador por defecto es `room.occupancy.updated` con `occupied: false`, que
 MiniHotel recomienda por encima del estado de la reservación. Se cambia con
 `integrations.webhooks.disparador`.
 
-Para arrancar sin riesgo, despliega con `facturacion-automatica: false`, observa unos días el
-panel de `/webhooks.html` y actívalo después hotel por hotel.
+Para arrancar sin riesgo, despliega con `facturacion-automatica: false`, observa unos días los
+eventos en `GET /api/webhooks/minihotel/events` y actívalo después hotel por hotel.
 
 ---
 
@@ -197,6 +199,7 @@ Todos admiten id explícito o búsqueda por nombre/código:
 | `producto-extranjero` | Código del servicio exento (huéspedes del exterior) |
 | `impuesto-iva` / `impuesto-iva-id` | IVA a aplicar; el porcentaje sale del catálogo |
 | `forma-pago-contado` / `forma-pago-credito` | Nombres de los medios de pago en Siigo |
+| `forma-pago-contado-id` / `forma-pago-credito-id` | Id del medio de pago (recomendado: no cambia si lo renombran); si se define, el nombre se ignora |
 | `consumidor-final-identificacion` | Tercero genérico para reservas sin documento |
 | `ciudad-por-defecto` | Ciudad cuando MiniHotel no informa una reconocible |
 | `enviar-dian` | `stamp.send` al crear la factura |
@@ -342,9 +345,6 @@ Interfaz web en `http://localhost:8082/`:
 - Botón de reintento para las fallidas, con opción de cambiar el número de reservación.
 - Visualización del error y del payload JSON enviado a Siigo.
 
-En `/webhooks.html` hay una segunda vista para los eventos recibidos por webhook: estado del
-módulo, contadores, filtros y reproceso manual con el JSON crudo a la vista.
-
 ---
 
 ## Pruebas
@@ -369,7 +369,7 @@ JSON de ejemplo de la documentación de MiniHotel.
 | **Resumen de reservación** | Si hay varios cargos y alguno tiene hora `00:00`, ese es el resumen final: se factura solo ese, para no duplicar el consumo. |
 | **Huésped extranjero** | País distinto de Colombia → se usa `producto-extranjero` **sin IVA**. Nacional → `producto-nacional` con IVA. |
 | **Desagregación del IVA** | MiniHotel entrega el valor con IVA incluido. El renglón se envía con el precio base (`valor / 1,19`) más el impuesto explícito, y el medio de pago recompone el total. |
-| **Medio de pago** | Si la reserva trae valor en `zip`, ese es el nombre del medio de pago en Siigo. Si no, aplica la regla de CASH. |
+| **Medio de pago** | `zip` vacío o nulo → `forma-pago-contado` (Efectivo, código 1). `zip` con cualquier valor → `forma-pago-credito` (Pagos, código 6). Si está `forma-pago-*-id`, se busca por id. |
 | **Tercero por defecto** | Reserva sin identificación → se factura al consumidor final configurado. |
 | **Tipo de documento** | Se infiere: formato `NNNNNNNNN-D` → NIT; con letras → pasaporte; extranjero con solo dígitos → cédula de extranjería; resto → cédula. Si no cumple el formato numérico de Siigo, se degrada a documento extranjero (42). |
 | **Unicidad de reservación** | No se puede sincronizar dos veces la misma reservación para el mismo hotel. Para re-sincronizar, usar el endpoint de reintento. |
