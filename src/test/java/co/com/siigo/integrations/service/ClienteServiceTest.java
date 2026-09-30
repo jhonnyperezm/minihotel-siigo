@@ -73,6 +73,25 @@ class ClienteServiceTest {
                 .hasMessageContaining("consumidor final");
     }
 
+    @Test
+    void obtenerOCrearCliente_identificacionDeRelleno_usaConsumidorFinal() {
+        when(clienteClient.buscarPorIdentificacion("222222222222"))
+                .thenReturn(Optional.of(cliente("222222222222")));
+
+        for (String relleno : List.of("1", "0", "123", "000000", "1111111111", "1.111.111")) {
+            var ref = service.obtenerOCrearCliente(guest(relleno, "Colombia"));
+            assertThat(ref.identificacion()).as(relleno).isEqualTo("222222222222");
+        }
+        verify(clienteClient, never()).crearCliente(any());
+    }
+
+    @Test
+    void esIdentificacionValida_documentosReales_sonValidos() {
+        assertThat(service.esIdentificacionValida("12345678")).isTrue();
+        assertThat(service.esIdentificacionValida("800197268")).isTrue();
+        assertThat(service.esIdentificacionValida("BE189406")).isTrue();
+    }
+
     // ─── cliente existente vs nuevo ───────────────────────────────────────
 
     @Test

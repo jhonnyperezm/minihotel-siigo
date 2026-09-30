@@ -40,6 +40,7 @@ public class ClienteService {
     private static final int MAX_TELEFONO = 10;
     private static final String TELEFONO_POR_DEFECTO = "11111111";
     private static final String EMAIL_POR_DEFECTO = "correo@noinformado.com";
+    private static final int MIN_IDENTIFICACION = 5;
 
     private final SiigoClienteClient clienteClient;
     private final HotelContextService hotelContextService;
@@ -55,20 +56,19 @@ public class ClienteService {
      * @throws IllegalStateException si el consumidor final no existe o si Siigo rechaza la creación
      */
     public ClienteRef obtenerOCrearCliente(GuestResponse guest) {
-        var facturacion = hotelContextService.getFacturacion();
         String identificacion = guest == null ? null : guest.getIdNumber();
 
         if (isNull(identificacion) || identificacion.isBlank()) {
-            String consumidorFinal = facturacion.getConsumidorFinalIdentificacion();
-            clienteClient.buscarPorIdentificacion(consumidorFinal)
-                    .orElseThrow(() -> new IllegalStateException(
-                            "No existe en Siigo el tercero consumidor final con identificación '"
-                            + consumidorFinal + "'. Créalo en Siigo Nube o ajusta la configuración."));
-            log.info("Reserva sin identificación: se factura al consumidor final {}", consumidorFinal);
-            return new ClienteRef(consumidorFinal, facturacion.getSucursalCliente());
+            log.info("Reserva sin identificación: se factura al consumidor final");
+            return consumidorFinal();
         }
 
         String normalizada = normalizarIdentificacion(identificacion);
+        if (!esIdentificacionValida(normalizada)) {
+            log.warn("Identificación '{}' de {} no es válida: se factura al consumidor final",
+                    identificacion, guest.getFullName());
+            return consumidorFinal();
+        }
 
         Optional<ClienteResponse> existente = clienteClient.buscarPorIdentificacion(normalizada);
         if (existente.isPresent()) {
@@ -87,6 +87,26 @@ public class ClienteService {
 
         log.info("Cliente creado en Siigo: {} ({})", creado.nombreCompleto(), creado.identification());
         return new ClienteRef(creado.identification(), creado.sucursal());
+    }
+
+    private ClienteRef consumidorFinal() {
+        var facturacion = hotelContextService.getFacturacion();
+        String consumidorFinal = facturacion.getConsumidorFinalIdentificacion();
+        clienteClient.buscarPorIdentificacion(consumidorFinal)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No existe en Siigo el tercero consumidor final con identificación '"
+                        + consumidorFinal + "'. Créalo en Siigo Nube o ajusta la configuración."));
+        return new ClienteRef(consumidorFinal, facturacion.getSucursalCliente());
+    }
+
+    /**
+     * Descarta identificaciones de relleno que la recepción digita para poder cerrar la reserva
+     * ({@code 1}, {@code 0}, {@code 000000}, {@code 11111111}): son demasiado cortas o repiten
+     * un único carácter. Crearlas en Siigo ensucia los terceros y la DIAN las rechaza.
+     */
+    boolean esIdentificacionValida(String normalizada) {
+        return normalizada.length() >= MIN_IDENTIFICACION
+                && !normalizada.matches("(.)\\1+");
     }
 
     /**
