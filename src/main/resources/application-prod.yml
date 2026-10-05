@@ -78,6 +78,7 @@ integrations:
         access-key: "MjJmMTRlZjUtYmZmNS00MTNjLTkzMDMtNmYyZTY3ZTA3NzI4OiN5JTg5PjN+NE4="
         partner-id: "minihotel"
       facturacion:
+        vendedor-id: 693                         # Juan Diego López Velásquez (CC 1007559194)
         forma-pago-contado: "Efectivo"
         forma-pago-contado-id: 7027              # zip vacío (código 1)
         forma-pago-credito: "Movimiento Bancario"

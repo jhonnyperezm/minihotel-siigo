@@ -80,6 +80,7 @@ integrations:
         access-key: "${SIIGO_SAJONIA_KEY:MjJmMTRlZjUtYmZmNS00MTNjLTkzMDMtNmYyZTY3ZTA3NzI4OiN5JTg5PjN+NE4=}"
         partner-id: "${SIIGO_PARTNER_ID:minihotel}"
       facturacion:
+        vendedor-id: 693                         # Juan Diego López Velásquez (CC 1007559194)
         usar-fecha-actual: true
         forma-pago-contado: "Efectivo"
         forma-pago-contado-id: 7027              # zip vacío (código 1)
