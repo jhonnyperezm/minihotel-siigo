@@ -17,10 +17,11 @@ import java.util.List;
 /**
  * Sincronización automática de reservaciones hacia Siigo.
  *
- * <p>Tres procesos programados:
+ * <p>Cuatro procesos programados:
  * <ul>
  *   <li>La sincronización cada media hora de los check-out de ayer y de hoy, que crea las
  *       facturas a lo largo del día.</li>
+ *   <li>El reintento cada media hora de las transacciones que quedaron en FAILED.</li>
  *   <li>La sincronización nocturna de las salidas del día anterior, que reconcilia y
  *       reintenta las fallidas.</li>
  *   <li>El timbrado de las facturas electrónicas que quedaron en estado {@code Draft},
@@ -91,8 +92,7 @@ public class ScheduledSyncService {
      * se recoge en la corrida de las 00:00 aunque su fecha de salida ya sea "ayer". Las reservas
      * que ya tienen transacción se omiten, así que repetir el rango no duplica facturas.
      *
-     * <p>No reintenta las fallidas: eso queda en el proceso nocturno, para no insistir contra
-     * Siigo cada media hora con un error que suele requerir intervención manual.
+     * <p>No reintenta las fallidas: de eso se encarga {@link #reintentarFallidasCadaMediaHora()}.
      */
     @Scheduled(cron = "0 0/30 * * * *", zone = "America/Bogota")
     public void syncCadaMediaHora() {
@@ -111,6 +111,25 @@ public class ScheduledSyncService {
 
         log.info("=== Sincronización cada media hora completada · facturas creadas: {} · hoteles con errores: {} ===",
                 resumen.facturas(), resumen.fallidos());
+    }
+
+    /**
+     * Reintenta cada media hora las transacciones en estado FAILED.
+     *
+     * <p>Corre a los 15 y 45 minutos, desfasado de la sincronización de la media hora, para no
+     * reintentar una reserva que esa corrida acaba de marcar como fallida.
+     */
+    @Scheduled(cron = "0 15/30 * * * *", zone = "America/Bogota")
+    public void reintentarFallidasCadaMediaHora() {
+
+        var reintentos = reintentarFallidas();
+        if (reintentos.total() == 0) {
+            log.debug("Reintento cada media hora: no hay transacciones fallidas");
+            return;
+        }
+
+        log.info("=== Reintento cada media hora completado · exitosos: {} · fallidos: {} ===",
+                reintentos.exitosos(), reintentos.fallidos());
     }
 
     /**
