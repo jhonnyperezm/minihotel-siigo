@@ -243,13 +243,13 @@ public class ClienteService {
     /**
      * Siigo no admite caracteres especiales en el número de identificación.
      * Para NIT se descarta el dígito de verificación, que viaja en su propio campo.
+     * Se dejan solo letras y dígitos: MiniHotel a veces trae basura como "´PA1530985".
      */
     private String normalizarIdentificacion(String identificacion) {
-        String limpia = identificacion.trim().toUpperCase();
-        if (limpia.replaceAll("[\\s.]", "").matches("\\d{8,10}-\\d")) {
+        String limpia = Util.normalizarTexto(identificacion).toUpperCase();
+        if (limpia.replaceAll("[\\s.]", "").matches("\\d{8,10}-\\d"))
             return Util.soloDigitos(limpia.substring(0, limpia.lastIndexOf('-')));
-        }
-        return limpia.replaceAll("[\\s.-]", "");
+        return limpia.replaceAll("[^A-Z0-9]", "");
     }
 
     private boolean esPaisExtranjero(String country) {

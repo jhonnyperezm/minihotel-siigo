@@ -204,6 +204,16 @@ class ClienteServiceTest {
         assertThat(capturarRequest().phones().get(0).number()).isEqualTo("5730060033");
     }
 
+    @Test
+    void obtenerOCrearCliente_identificacionConCaracteresEspeciales_seLimpia() {
+        when(clienteClient.buscarPorIdentificacion("PA1530985")).thenReturn(Optional.empty());
+        when(clienteClient.crearCliente(any())).thenReturn(cliente("PA1530985"));
+
+        service.obtenerOCrearCliente(guest("´PA1530985", "Colombia"));
+
+        assertThat(capturarRequest().identification()).isEqualTo("PA1530985");
+    }
+
     // ─── NIT ──────────────────────────────────────────────────────────────
 
     @Test
